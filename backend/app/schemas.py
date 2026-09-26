@@ -16,7 +16,7 @@ class MemoryExtraction(BaseModel):
     error_code: Optional[str] = Field(None, description="Numeric or alphanumeric error code, e.g., '403'")
     symptom: Optional[str] = Field(None, description="Description of the failure or symptom observed")
     feedback_type: Optional[Literal["PERSISTENT_FAILURE", "RESOLVED", "NEUTRAL"]] = Field(
-        None, description="Explicit feedback regarding whether a previous fix worked"
+        "NEUTRAL", description="Explicit feedback regarding whether a previous fix worked"
     )
 
 # --- 3. Retrieval Result Schema ---

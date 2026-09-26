@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any, Tuple, List
 import httpx
 
 from app.schemas import MemoryExtraction, ActiveTicketContext, ChatResponse
-from app.config import GEMINI_API_KEY, LLM_MODEL
+from app.config import GEMINI_API_KEY, LLM_MODEL, GROQ_API_KEY, GROQ_MODEL
 from app.database import run_query
 import app.cypher_library as cypher
 
@@ -159,6 +159,56 @@ def extract_intent_and_entities_heuristic(message: str) -> MemoryExtraction:
         feedback_type=feedback
     )
 
+def extract_with_groq_if_available(message: str) -> Optional[MemoryExtraction]:
+    """
+    Ultra-fast structured JSON extraction via Groq API (80-150ms).
+    Uses JSON mode to guarantee schema compliance.
+    """
+    if not GROQ_API_KEY:
+        return None
+
+    system_prompt = """You are an intent and entity extraction engine for enterprise IT support.
+Analyze the user message and return strictly valid JSON matching this schema:
+{
+  "intent": "REPORT_NEW_ISSUE" | "ISSUE_FOLLOWUP" | "GENERAL_QUERY",
+  "product_name": "Graph Data Science Workspace" | "Neo4j AuraDB Enterprise" | "Python Application Driver" | null,
+  "error_code": string | null,
+  "symptom": string | null,
+  "feedback_type": "PERSISTENT_FAILURE" | "RESOLVED" | "NEUTRAL"
+}
+Rules:
+- "still not working", "still failing", "persists", "didn't help" -> feedback_type: "PERSISTENT_FAILURE", intent: "ISSUE_FOLLOWUP".
+- "fixed now", "it worked" -> feedback_type: "RESOLVED", intent: "ISSUE_FOLLOWUP".
+- Reporting a new failure on a named product -> intent: "REPORT_NEW_ISSUE".
+- Inquiring about support hours or general info -> intent: "GENERAL_QUERY"."""
+
+    try:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": GROQ_MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.0
+        }
+        with httpx.Client(timeout=3.0) as client:
+            resp = client.post(url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                raw_text = data["choices"][0]["message"]["content"]
+                parsed = json.loads(raw_text)
+                return MemoryExtraction(**parsed)
+    except Exception as e:
+        logger.warning(f"Groq API extraction failed/timed out: {e}. Falling back to next engine.")
+
+    return None
+
 def extract_with_gemini_if_available(message: str) -> Optional[MemoryExtraction]:
     """
     Attempts structured JSON extraction via Gemini API if an API key is available.
@@ -214,10 +264,18 @@ User message: "{message}"
     return None
 
 def extract_intent_and_entities(message: str) -> MemoryExtraction:
-    """Two-tier extraction: Gemini LLM if configured and healthy, deterministic heuristic otherwise."""
+    """Three-tier extraction: Groq (ultra-fast LPU) -> Gemini -> Deterministic Heuristic."""
+    groq_result = extract_with_groq_if_available(message)
+    if groq_result:
+        logger.info("Structured extraction powered by Groq LPU API")
+        return groq_result
+
     gemini_result = extract_with_gemini_if_available(message)
     if gemini_result:
+        logger.info("Structured extraction powered by Gemini API")
         return gemini_result
+
+    logger.info("Structured extraction powered by Deterministic Heuristic Engine")
     return extract_intent_and_entities_heuristic(message)
 
 def retrieve_active_tickets(email: str) -> List[ActiveTicketContext]:
