@@ -73,33 +73,6 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-## 🎬 3-Minute Live Demo Pitch Sequence
-
-Use the **1-Click Scripted Demo Controls** in the top-right panel to execute the winning pitch:
-
-1. **Step 1: [Seed Customer]**
-   - Click button.
-   - Pre-seeds `:Customer (Alice Chen)` and `:Product (Graph Data Science Workspace)` in Neo4j.
-   - Graph Inspector immediately renders Alice connected to the GDS product.
-2. **Step 2: [Send S1 Issue]**
-   - Click button.
-   - Simulates Alice reporting: *"Hi, my Graph Data Science workspace is failing with Error 403 on launch."*
-   - Agent logs Ticket `#TK-101 (OPEN)`, diagnoses Error 403, and prescribes clearing the SSO cache.
-   - Graph updates in real-time with Ticket, Issue, Resolution 1, and Outcome `PENDING`.
-3. **Step 3: [Simulate Break]**
-   - Click button.
-   - Completely wipes the frontend conversation messages (`messages = []`).
-   - Demonstrates to judges that the system holds **zero in-memory conversation state**.
-4. **Step 4: [Send S2 Return ("It's still not working")]**
-   - Click button.
-   - Sends the 4-word follow-up with zero chat history.
-   - Backend queries Neo4j, retrieves Ticket `#TK-101`, marks Outcome 1 as **FAILED ❌**, updates Ticket to **ESCALATED ⚡**, and creates a Tier-2 resolution.
-   - Agent responds: *"Welcome back Alice. I see that clearing your SSO cache didn't resolve Error 403 on your GDS Workspace. Since Tier-1 troubleshooting failed, I have escalated Ticket #TK-101 in the support workflow for Tier-2 review."*
-5. **Step 5: [Reset Canvas]**
-   - Click button to wipe demo ticket state for a clean re-run.
-
----
-
 ## 🏆 Hackathon Judging Criteria Alignment
 
 | Criterion | Weight | How NexusGraph Support Delivers |
