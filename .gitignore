@@ -34,3 +34,7 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+
+# Hackathon analysis documents
+PROBLEM_STATEMENTS_DEEP_ANALYSIS.md
+
